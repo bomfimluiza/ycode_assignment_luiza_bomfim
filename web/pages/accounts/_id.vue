@@ -86,23 +86,26 @@ export default {
       show: false,
       payment: {},
 
-      account: null,
-      transactions: null,
+      account: {},
+      transactions: [],
 
-      loading: true
+      loading: true,
+
+      accountId: 0
     };
   },
 
   mounted() {
     const that = this;
+    this.accountId = this.$route.params.id;
 
     axios
-      .get(`http://localhost:8000/api/accounts/${this.$route.params.id}`)
+      .get(this.getUrl(this.accountId))
       .then(function(response) {
-        if (!response.data.length) {
-          window.location = "/";
+        if (!response.data) {
+          window.location.href = "/";
         } else {
-          that.account = response.data[0];
+          that.account = response.data;
 
           if (that.account && that.transactions) {
             that.loading = false;
@@ -111,13 +114,11 @@ export default {
       });
 
     axios
-      .get(
-        `http://localhost:8000/api/accounts/${
-          that.$route.params.id
-        }/transactions`
-      )
+      .get(this.getUrl(this.accountId + '/transactions'))
       .then(function(response) {
-        that["transactions"] = response.data;
+        for(const key in response.data) {
+          that.transactions.push(response.data[key]);
+        }
 
         var transactions = [];
         for (let i = 0; i < that.transactions.length; i++) {
@@ -143,15 +144,12 @@ export default {
   methods: {
     onSubmit(evt) {
       var that = this;
-
       evt.preventDefault();
 
-      axios.post(
-        `http://localhost:8000/api/accounts/${
-          this.$route.params.id
-        }/transactions`,
-
-        this.payment
+      that.payment.from = that.accountId;
+      axios
+        .post(this.getUrl(this.accountId + '/transactions'),
+          that.payment
       );
 
       that.payment = {};
@@ -160,21 +158,17 @@ export default {
       // update items
       setTimeout(() => {
         axios
-          .get(`http://localhost:8000/api/accounts/${this.$route.params.id}`)
+          .get(this.getUrl(this.accountId))
           .then(function(response) {
             if (!response.data.length) {
-              window.location = "/";
+              window.location.href = "/";
             } else {
               that.account = response.data[0];
             }
           });
 
         axios
-          .get(
-            `http://localhost:8000/api/accounts/${
-              that.$route.params.id
-            }/transactions`
-          )
+          .get(this.getUrl(this.accountId + '/transactions'))
           .then(function(response) {
             that["transactions"] = response.data;
 
@@ -194,6 +188,9 @@ export default {
             that.transactions = transactions;
           });
       }, 200);
+    },
+    getUrl(param) {
+      return 'https://ycode-81e4e.firebaseio.com/accounts/-M4uPSCQsSUxrtN_5UvY/' + param + '.json';
     }
   }
 };
