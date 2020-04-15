@@ -1,5 +1,6 @@
 <template>
   <div>
+    <!-- TODO: Change loading... for a spinner -->
     <div class="container" v-if="loading">loading...</div>
 
     <div class="container" v-if="!loading">
@@ -23,7 +24,7 @@
 
 <script lang="ts">
 import { getAccountInfo } from "@/api/account";
-import { getTransactions, postTransaction } from "@/api/transaction";
+import { getTransactions, addTransaction } from "@/api/transaction";
 import { formatTransaction, getCurrency } from "@/utils/format";
 import AccountDetails from "@/components/AccountDetails";
 import NewTransaction from "@/components/NewTransaction";
@@ -36,7 +37,6 @@ export default {
       show: false,
       payment: {},
       account: {},
-      balanceString: '',
       transactions: [],
       loading: true
     };
@@ -47,8 +47,6 @@ export default {
 
     getAccountInfo(this.account.id).then(response => {
       that.account = response;
-      that.account.id = that.$route.params.id;
-      that.balanceString = getCurrency(that.account) + that.account.balance;
       getTransactions(this.account).then(response => {
         that.transactions = response;
         if (that.account && that.transactions) {
@@ -57,20 +55,35 @@ export default {
       });
     });
   },
+  computed: {
+    balanceString() {
+      return getCurrency(this.account) + this.account.balance;
+    }
+  },
   methods: {
     onSubmit(payment) {
       var that = this;
       payment.from = this.account.id;
-      postTransaction(this.account, payment)
+      //TODO: Insert a spinner while request is being made
+      addTransaction(this.account, payment)
         .then(response => {
-          if(response.status === 200) {
-            that.addTransaction(payment);
+          if(response) {
+            that.makeTransaction(payment);
             payment = {};
-            this.show = false;
+            that.show = false;
           }
         });
     },
-    addTransaction(transaction) {
+    makeTransaction(transaction) {
+      if (this.account.id != transaction.to) {
+        this.account.balance -= transaction.amount;
+      }
+      else {
+        this.account.balance += transaction.amount;
+      }
+      this.addToHistory(transaction);
+    },
+    addToHistory(transaction) {
       let formattedTransaction = formatTransaction(transaction, this.account);
       this.transactions.push(formattedTransaction);
     }
