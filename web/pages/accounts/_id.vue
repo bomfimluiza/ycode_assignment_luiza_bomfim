@@ -4,7 +4,7 @@
 
     <div class="container" v-if="!loading">
       <b-card :header="'Welcome, ' + account.name" class="mt-3">
-        <account-details :account="account.id" :balance="getCurrency() + account.balance" />
+        <account-details :account="account.id" :balance="balanceString" />
 
         <b-button size="sm" variant="success" @click="show = !show">
           New payment
@@ -22,10 +22,12 @@
 </template>
 
 <script lang="ts">
-import axios from "axios";
-import AccountDetails from '../../components/AccountDetails';
-import NewTransaction from '../../components/NewTransaction';
-import LogoutButton from '../../components/LogoutButton';
+import { getAccountInfo } from "@/api/account";
+import { getTransactions, postTransaction } from "@/api/transaction";
+import { formatTransaction, getCurrency } from "@/utils/format";
+import AccountDetails from "@/components/AccountDetails";
+import NewTransaction from "@/components/NewTransaction";
+import LogoutButton from "@/components/LogoutButton";
 
 export default {
   components: { AccountDetails, NewTransaction, LogoutButton },
@@ -34,6 +36,7 @@ export default {
       show: false,
       payment: {},
       account: {},
+      balanceString: '',
       transactions: [],
       loading: true
     };
@@ -42,73 +45,34 @@ export default {
     this.account.id = this.$route.params.id;
     const that = this;
 
-    this.getUserInfo(this);
-    this.getTransactions(this);
-
-    if (this.account && this.transactions) {
-      this.loading = false;
-    }
+    getAccountInfo(this.account.id).then(response => {
+      that.account = response;
+      that.account.id = that.$route.params.id;
+      that.balanceString = getCurrency(that.account) + that.account.balance;
+      getTransactions(this.account).then(response => {
+        that.transactions = response;
+        if (that.account && that.transactions) {
+          that.loading = false;
+        }
+      });
+    });
   },
   methods: {
     onSubmit(payment) {
       var that = this;
-
       payment.from = this.account.id;
-      const postUrl = this.getUrl(this.account.id + '/transactions');
-      axios
-        .post(postUrl, payment)
-        .then(res => {
-          if(res.status === 200) {
+      postTransaction(this.account, payment)
+        .then(response => {
+          if(response.status === 200) {
             that.addTransaction(payment);
             payment = {};
             this.show = false;
           }
         });
     },
-    getUserInfo(that) {
-      axios
-        .get(this.getUrl(this.account.id))
-        .then(function(response) {
-          if (!response.data) {
-            window.location.href = '/';
-          } else {
-            that.account = response.data;
-            that.account.id = that.$route.params.id;
-          }
-        });
-    },
-    getTransactions(that) {
-      axios
-        .get(this.getUrl(this.account.id + '/transactions'))
-        .then(function(response) {
-          for(const key in response.data) {
-            let formattedTransaction = that.formatTransaction(response.data[key]);
-            that.transactions.push(formattedTransaction);
-          }
-        });
-    },
     addTransaction(transaction) {
-      let formattedTransaction = this.formatTransaction(transaction);
+      let formattedTransaction = formatTransaction(transaction, this.account);
       this.transactions.push(formattedTransaction);
-    },
-    formatTransaction(transaction) {
-      if(typeof transaction.amount === typeof 1) {
-        transaction.amount = this.getCurrency() + transaction.amount;
-        transaction.amount = this.getSign(transaction);
-      }
-      return transaction;
-    },
-    getCurrency() {
-      return this.account.currency === 'usd' ? '$' : '€';
-    },
-    getSign(transaction) {
-      if (this.account.id != transaction.to) {
-        transaction.amount = '-' + transaction.amount;
-      }
-      return transaction.amount;
-    },
-    getUrl(param) {
-      return 'https://ycode-81e4e.firebaseio.com/accounts/-M4uPSCQsSUxrtN_5UvY/' + param + '.json';
     }
   }
 };
