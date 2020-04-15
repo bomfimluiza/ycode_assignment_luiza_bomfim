@@ -1,23 +1,37 @@
 <template>
   <div>
-    <!-- TODO: Change loading... for a spinner -->
-    <div class="container" v-if="loading">loading...</div>
+    <div class="container d-flex justify-content-center" v-if="loading">
+      <b-spinner variant="primary" class="m-5 loading" label="Loading..."></b-spinner>
+    </div>
 
     <div class="container" v-if="!loading">
-      <b-card :header="'Welcome, ' + account.name" class="mt-3">
+      <b-card
+        :header="'Welcome, ' + account.name"
+        class="mt-3 animated slideInUp"
+        header-bg-variant="primary"
+        border-variant="primary"
+        header-text-variant="white"
+      >
         <account-details :account="account.id" :balance="balanceString" />
 
-        <b-button size="sm" variant="success" @click="show = !show">
-          New payment
-        </b-button>
+        <new-payment-button @click="show = !show" />
 
         <logout-button />
       </b-card>
-      <new-transaction v-show="show" @submit="onSubmit" />
-
-      <b-card class="mt-3" header="Payment History">
-        <b-table striped hover :items="transactions"></b-table>
-      </b-card>
+      <transition
+        enter-active-class="animated slideInUp"
+        leave-active-class="animated slideOutDown"
+      >
+        <new-transaction
+          v-show="show"
+          @submit="onSubmit"
+          :loading="addingTransaction"
+        />
+      </transition>
+      <b-alert class="mt-3" v-model="insuficientFunds" variant="danger" dismissible>
+        Your funds are insuficient for this transaction.
+      </b-alert>
+      <history :items="transactions" />
     </div>
   </div>
 </template>
@@ -28,17 +42,21 @@ import { getTransactions, addTransaction } from "@/api/transaction";
 import { formatTransaction, getCurrency } from "@/utils/format";
 import AccountDetails from "@/components/AccountDetails";
 import NewTransaction from "@/components/NewTransaction";
+import NewPaymentButton from "@/components/NewPaymentButton";
 import LogoutButton from "@/components/LogoutButton";
+import History from "@/components/History";
 
 export default {
-  components: { AccountDetails, NewTransaction, LogoutButton },
+  components: { AccountDetails, NewTransaction, NewPaymentButton, LogoutButton, History },
   data() {
     return {
       show: false,
       payment: {},
       account: {},
       transactions: [],
-      loading: true
+      loading: true,
+      addingTransaction: false,
+      insuficientFunds: false
     };
   },
   mounted() {
@@ -65,10 +83,11 @@ export default {
       var that = this;
       payment.from = this.account.id;
       if(this.hasFunds(payment)){
-        //TODO: Insert a spinner while request is being made
+        this.addingTransaction = true;
         addTransaction(this.account, payment)
           .then(response => {
             if(response) {
+              that.addingTransaction = false;
               that.makeTransaction(payment);
               payment = {};
               that.show = false;
@@ -81,8 +100,7 @@ export default {
         return true;
       }
       else {
-        //TODO: Change alert for a dialog
-        alert('Your funds are insuficient.');
+        this.insuficientFunds = true;
         return false;
       }
     },
@@ -102,3 +120,10 @@ export default {
   }
 };
 </script>
+
+<style scoped>
+.loading {
+  width: 50px;
+  height: 50px;
+}
+</style>
