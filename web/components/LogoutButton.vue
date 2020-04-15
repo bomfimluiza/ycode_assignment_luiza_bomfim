@@ -1,7 +1,7 @@
 <template>
   <b-button
     class="float-right"
-    variant="danger"
+    variant="outline-danger"
     size="sm"
     nuxt-link
     to="/"
