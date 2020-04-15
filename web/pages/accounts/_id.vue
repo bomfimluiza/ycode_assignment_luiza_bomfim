@@ -4,70 +4,15 @@
 
     <div class="container" v-if="!loading">
       <b-card :header="'Welcome, ' + account.name" class="mt-3">
-        <b-card-text>
-          <div>
-            Account: <code>{{ account.id }}</code>
-          </div>
-          <div>
-            Balance:
-            <code
-              >{{ account.currency === "usd" ? "$" : "€"
-              }}{{ account.balance }}</code
-            >
-          </div>
-        </b-card-text>
-        <b-button size="sm" variant="success" @click="show = !show"
-          >New payment</b-button
-        >
+        <account-details :account="account.id" :balance="getCurrency() + account.balance" />
 
-        <b-button
-          class="float-right"
-          variant="danger"
-          size="sm"
-          nuxt-link
-          to="/"
-          >Logout</b-button
-        >
+        <b-button size="sm" variant="success" @click="show = !show">
+          New payment
+        </b-button>
+
+        <logout-button />
       </b-card>
-
-      <b-card class="mt-3" header="New Payment" v-show="show">
-        <b-form @submit="onSubmit">
-          <b-form-group id="input-group-1" label="To:" label-for="input-1">
-            <b-form-input
-              id="input-1"
-              size="sm"
-              v-model="payment.to"
-              type="number"
-              required
-              placeholder="Destination ID"
-            ></b-form-input>
-          </b-form-group>
-
-          <b-form-group id="input-group-2" label="Amount:" label-for="input-2">
-            <b-input-group prepend="$" size="sm">
-              <b-form-input
-                id="input-2"
-                v-model="payment.amount"
-                type="number"
-                required
-                placeholder="Amount"
-              ></b-form-input>
-            </b-input-group>
-          </b-form-group>
-
-          <b-form-group id="input-group-3" label="Details:" label-for="input-3">
-            <b-form-input
-              id="input-3"
-              size="sm"
-              v-model="payment.details"
-              required
-              placeholder="Payment details"
-            ></b-form-input>
-          </b-form-group>
-
-          <b-button type="submit" size="sm" variant="primary">Submit</b-button>
-        </b-form>
-      </b-card>
+      <new-transaction v-show="show" @submit="onSubmit" />
 
       <b-card class="mt-3" header="Payment History">
         <b-table striped hover :items="transactions"></b-table>
@@ -78,9 +23,12 @@
 
 <script lang="ts">
 import axios from "axios";
-import Vue from "vue";
+import AccountDetails from '../../components/AccountDetails';
+import NewTransaction from '../../components/NewTransaction';
+import LogoutButton from '../../components/LogoutButton';
 
 export default {
+  components: { AccountDetails, NewTransaction, LogoutButton },
   data() {
     return {
       show: false,
@@ -91,8 +39,8 @@ export default {
     };
   },
   mounted() {
-    const that = this;
     this.account.id = this.$route.params.id;
+    const that = this;
 
     this.getUserInfo(this);
     this.getTransactions(this);
@@ -102,31 +50,30 @@ export default {
     }
   },
   methods: {
-    onSubmit(evt) {
+    onSubmit(payment) {
       var that = this;
-      evt.preventDefault();
 
-      this.payment.from = this.account.id;
+      payment.from = this.account.id;
       const postUrl = this.getUrl(this.account.id + '/transactions');
-      axios.post(postUrl, this.payment);
-
-      this.payment = {};
-      this.show = false;
-
-      // update items
-      setTimeout(() => {
-        that.getUserInfo(that);
-        that.getTransactions(that);
-      }, 200);
+      axios
+        .post(postUrl, payment)
+        .then(res => {
+          if(res.status === 200) {
+            that.addTransaction(payment);
+            payment = {};
+            this.show = false;
+          }
+        });
     },
     getUserInfo(that) {
       axios
-        .get(that.getUrl(that.account.id))
+        .get(this.getUrl(this.account.id))
         .then(function(response) {
           if (!response.data) {
-            window.location.href = "/";
+            window.location.href = '/';
           } else {
             that.account = response.data;
+            that.account.id = that.$route.params.id;
           }
         });
     },
@@ -135,27 +82,28 @@ export default {
         .get(this.getUrl(this.account.id + '/transactions'))
         .then(function(response) {
           for(const key in response.data) {
-            that.transactions.push(response.data[key]);
+            let formattedTransaction = that.formatTransaction(response.data[key]);
+            that.transactions.push(formattedTransaction);
           }
-
-          that.transactions = that.formatTransactions(that.transactions);
         });
     },
-    formatTransactions(transactions) {
-      var formattedTransactions = [];
-      for (let i = 0; i < transactions.length; i++) {
-        transactions[i].amount = this.getCurrency() + transactions[i].amount;
-        transactions[i].amount = this.getSign(transactions[i]);
-        formattedTransactions.push(transactions[i]);
+    addTransaction(transaction) {
+      let formattedTransaction = this.formatTransaction(transaction);
+      this.transactions.push(formattedTransaction);
+    },
+    formatTransaction(transaction) {
+      if(typeof transaction.amount === typeof 1) {
+        transaction.amount = this.getCurrency() + transaction.amount;
+        transaction.amount = this.getSign(transaction);
       }
-      return formattedTransactions;
+      return transaction;
     },
     getCurrency() {
-      return this.account.currency === "usd" ? "$" : "€";
+      return this.account.currency === 'usd' ? '$' : '€';
     },
     getSign(transaction) {
       if (this.account.id != transaction.to) {
-        transaction.amount = "-" + transaction.amount;
+        transaction.amount = '-' + transaction.amount;
       }
       return transaction.amount;
     },
