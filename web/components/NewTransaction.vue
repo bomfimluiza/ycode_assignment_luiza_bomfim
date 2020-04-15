@@ -1,5 +1,11 @@
 <template>
-  <b-card class="mt-3" header="New Payment">
+  <b-card
+    class="mt-3"
+    header="New Payment"
+    header-bg-variant="success"
+    border-variant="success"
+    header-text-variant="white"
+  >
     <b-form @submit="onSubmit">
       <b-form-group id="input-group-1" label="To:" label-for="input-1">
         <b-form-input
@@ -34,7 +40,10 @@
         ></b-form-input>
       </b-form-group>
 
-      <b-button id="submit" type="submit" size="sm" variant="primary">Submit</b-button>
+      <b-button id="submit" type="submit" size="sm" variant="primary">
+        <b-spinner small v-show="loading"></b-spinner>
+        <span v-show="!loading">Submit</span>
+      </b-button>
     </b-form>
   </b-card>
 </template>
@@ -42,6 +51,9 @@
 <script lang="ts">
 export default {
   name: 'newTransaction',
+  props: {
+    loading: Boolean
+  },
   data() {
     return {
       payment: {}
@@ -56,3 +68,9 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+#submit {
+  width: 100px;
+}
+</style>
