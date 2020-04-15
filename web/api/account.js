@@ -14,14 +14,10 @@ export async function callPutEndpoint(URL, data) {
 export async function getAccountInfo(accountId) {
   try {
     const response = await callGetEndpoint(accountEndpoint(accountId));
-    if(!response.data) {
-      window.location.href = '/';
-    }
-    else {
-      response.data.id = accountId;
-      return response.data;
-    }
+    response.data.id = accountId;
+    return response.data;
   } catch (e) {
+    window.location.href = '/';
     return null;
   }
 }
@@ -29,13 +25,9 @@ export async function getAccountInfo(accountId) {
 export async function updateAccountInfo(account) {
   try {
     const response = await callPutEndpoint(accountEndpoint(account.id), account);
-    if(!response.data) {
-      window.location.href = '/';
-    }
-    else {
-      return response.data;
-    }
+    return response;
   } catch (e) {
+    window.location.href = '/';
     return null;
   }
 }

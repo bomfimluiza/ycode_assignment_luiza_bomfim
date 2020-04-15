@@ -65,4 +65,4 @@ async function updateAccounts(fromAccount, toAccount, transaction){
   }
 }
 
-export default { getTransactions, postTransaction };
+export default { getTransactions, addTransaction };

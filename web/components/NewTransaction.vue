@@ -34,7 +34,7 @@
         ></b-form-input>
       </b-form-group>
 
-      <b-button type="submit" size="sm" variant="primary">Submit</b-button>
+      <b-button id="submit" type="submit" size="sm" variant="primary">Submit</b-button>
     </b-form>
   </b-card>
 </template>
