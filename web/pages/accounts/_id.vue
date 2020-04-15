@@ -85,109 +85,79 @@ export default {
     return {
       show: false,
       payment: {},
-
       account: {},
       transactions: [],
-
-      loading: true,
-
-      accountId: 0
+      loading: true
     };
   },
-
   mounted() {
     const that = this;
-    this.accountId = this.$route.params.id;
+    this.account.id = this.$route.params.id;
 
-    axios
-      .get(this.getUrl(this.accountId))
-      .then(function(response) {
-        if (!response.data) {
-          window.location.href = "/";
-        } else {
-          that.account = response.data;
+    this.getUserInfo(this);
+    this.getTransactions(this);
 
-          if (that.account && that.transactions) {
-            that.loading = false;
-          }
-        }
-      });
-
-    axios
-      .get(this.getUrl(this.accountId + '/transactions'))
-      .then(function(response) {
-        for(const key in response.data) {
-          that.transactions.push(response.data[key]);
-        }
-
-        var transactions = [];
-        for (let i = 0; i < that.transactions.length; i++) {
-          that.transactions[i].amount =
-            (that.account.currency === "usd" ? "$" : "€") +
-            that.transactions[i].amount;
-
-          if (that.account.id != that.transactions[i].to) {
-            that.transactions[i].amount = "-" + that.transactions[i].amount;
-          }
-
-          transactions.push(that.transactions[i]);
-        }
-
-        that.transactions = transactions;
-
-        if (that.account && that.transactions) {
-          that.loading = false;
-        }
-      });
+    if (this.account && this.transactions) {
+      this.loading = false;
+    }
   },
-
   methods: {
     onSubmit(evt) {
       var that = this;
       evt.preventDefault();
 
-      that.payment.from = that.accountId;
-      axios
-        .post(this.getUrl(this.accountId + '/transactions'),
-          that.payment
-      );
+      this.payment.from = this.account.id;
+      const postUrl = this.getUrl(this.account.id + '/transactions');
+      axios.post(postUrl, this.payment);
 
-      that.payment = {};
-      that.show = false;
+      this.payment = {};
+      this.show = false;
 
       // update items
       setTimeout(() => {
-        axios
-          .get(this.getUrl(this.accountId))
-          .then(function(response) {
-            if (!response.data.length) {
-              window.location.href = "/";
-            } else {
-              that.account = response.data[0];
-            }
-          });
-
-        axios
-          .get(this.getUrl(this.accountId + '/transactions'))
-          .then(function(response) {
-            that["transactions"] = response.data;
-
-            var transactions = [];
-            for (let i = 0; i < that.transactions.length; i++) {
-              that.transactions[i].amount =
-                (that.account.currency === "usd" ? "$" : "€") +
-                that.transactions[i].amount;
-
-              if (that.account.id != that.transactions[i].to) {
-                that.transactions[i].amount = "-" + that.transactions[i].amount;
-              }
-
-              transactions.push(that.transactions[i]);
-            }
-
-            that.transactions = transactions;
-          });
+        that.getUserInfo(that);
+        that.getTransactions(that);
       }, 200);
+    },
+    getUserInfo(that) {
+      axios
+        .get(that.getUrl(that.account.id))
+        .then(function(response) {
+          if (!response.data) {
+            window.location.href = "/";
+          } else {
+            that.account = response.data;
+          }
+        });
+    },
+    getTransactions(that) {
+      axios
+        .get(this.getUrl(this.account.id + '/transactions'))
+        .then(function(response) {
+          for(const key in response.data) {
+            that.transactions.push(response.data[key]);
+          }
+
+          that.transactions = that.formatTransactions(that.transactions);
+        });
+    },
+    formatTransactions(transactions) {
+      var formattedTransactions = [];
+      for (let i = 0; i < transactions.length; i++) {
+        transactions[i].amount = this.getCurrency() + transactions[i].amount;
+        transactions[i].amount = this.getSign(transactions[i]);
+        formattedTransactions.push(transactions[i]);
+      }
+      return formattedTransactions;
+    },
+    getCurrency() {
+      return this.account.currency === "usd" ? "$" : "€";
+    },
+    getSign(transaction) {
+      if (this.account.id != transaction.to) {
+        transaction.amount = "-" + transaction.amount;
+      }
+      return transaction.amount;
     },
     getUrl(param) {
       return 'https://ycode-81e4e.firebaseio.com/accounts/-M4uPSCQsSUxrtN_5UvY/' + param + '.json';
