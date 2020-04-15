@@ -64,15 +64,27 @@ export default {
     onSubmit(payment) {
       var that = this;
       payment.from = this.account.id;
-      //TODO: Insert a spinner while request is being made
-      addTransaction(this.account, payment)
-        .then(response => {
-          if(response) {
-            that.makeTransaction(payment);
-            payment = {};
-            that.show = false;
-          }
-        });
+      if(this.hasFunds(payment)){
+        //TODO: Insert a spinner while request is being made
+        addTransaction(this.account, payment)
+          .then(response => {
+            if(response) {
+              that.makeTransaction(payment);
+              payment = {};
+              that.show = false;
+            }
+          });
+      }
+    },
+    hasFunds(transaction){
+      if(this.account.balance - transaction.amount > 0) {
+        return true;
+      }
+      else {
+        //TODO: Change alert for a dialog
+        alert('Your funds are insuficient.');
+        return false;
+      }
     },
     makeTransaction(transaction) {
       if (this.account.id != transaction.to) {
