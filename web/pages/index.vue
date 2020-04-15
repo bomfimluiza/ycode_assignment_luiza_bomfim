@@ -1,50 +1,30 @@
 <template>
   <div class="container">
-    <div>
-      <b-form>
-        <b-form-group
-          id="input-group-2"
-          label="Enter your account ID:"
-          label-for="input-2"
-        >
-          <b-form-input
-            id="input"
-            type="number"
-            v-model="accountID"
-            required
-            placeholder="Account ID"
-          ></b-form-input>
-        </b-form-group>
-
-        <b-button nuxt-link :to="'/accounts/' + accountID" variant="primary"
-          >Login</b-button
-        >
-      </b-form>
+    <div class="animated slideInUp">
+      <logo />
+      <login-form />
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import Vue from "vue";
+import Logo from '@/components/Logo';
+import LoginForm from '@/components/LoginForm';
 
-export default Vue.extend({
-  data() {
-    return {
-      accountID: 1
-    };
-  },
-  components: {}
-});
+export default {
+  components: { Logo, LoginForm }
+}
 </script>
 
 <style scoped>
 .container {
   margin: 0 auto;
+  padding-top: 10%;
   min-height: 100vh;
   display: flex;
   justify-content: center;
-  align-items: center;
   text-align: center;
+  color: white;
 }
 
 .title {
