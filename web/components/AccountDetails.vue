@@ -1,10 +1,10 @@
 <template>
   <b-card-text>
     <div>
-      Account: <code>{{ account }}</code>
+      Account: <strong>{{ account }}</strong>
     </div>
     <div>
-      Balance: <code>{{ balance }}</code>
+      Balance: <strong>{{ balance }}</strong>
     </div>
   </b-card-text>
 </template>
